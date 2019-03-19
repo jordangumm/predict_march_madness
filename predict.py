@@ -1,36 +1,38 @@
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics      import log_loss
-
+import click
 import pandas as pd
 import numpy as np
 
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics      import log_loss
 
-df         = pd.read_csv('tourney_games.tsv', sep='\t', header=None)
-df_regular = pd.read_csv('regular_games.tsv', sep='\t', header=None)
+from datautil             import get_train_examples, get_test_examples
+from feature_engine       import k_neighbor_probs
 
-
-for season in range(2011, 2019):
-    test_examples = df.loc[df.iloc[:,-1] == season]
-    test_examples.drop(test_examples.columns[len(test_examples.columns)-1], axis=1, inplace=True)
-    test_y = test_examples.iloc[:,0].values
-    test_X = test_examples.iloc[:,1:].values
-
-    train_examples = df.loc[df.iloc[:,-1] < season]
-    train_examples.drop(train_examples.columns[len(train_examples.columns)-1], axis=1, inplace=True)
-    train_y = train_examples.iloc[:,0].values
-    train_X = train_examples.iloc[:,1:].values
-
-    train_examples = df_regular.loc[df_regular.iloc[:,-1] <= season]
-    train_examples.drop(train_examples.columns[len(train_examples.columns)-1], axis=1, inplace=True)
-    train_y = np.concatenate((train_y, train_examples.iloc[:,0].values))
-    train_X = np.concatenate((train_X, train_examples.iloc[:,1:].values), axis=0)
+from models.seed import predict_by_seed
 
 
-    clf = LogisticRegression(solver='lbfgs').fit(train_X, train_y)
+@click.command()
+def main():
+    for season in range(2011, 2019):
 
-    probs = clf.predict_proba(test_X)
-    print(probs)
-    acc  = clf.score(test_X, test_y)
-    loss = log_loss(test_y, probs)
-    print(f'{season}  acc: {acc}')
-    print(f'{season} loss: {loss}')
+        train_y, train_X = get_train_examples(season)
+        test_y, test_X   = get_test_examples(season)
+
+        train_column = k_neighbor_probs(train_X, train_y, train_X)
+        test_column  = k_neighbor_probs(train_X, train_y, test_X)
+
+        train_X = np.append(train_X, train_column, axis=1)
+        test_X  = np.append(test_X, test_column, axis=1)
+
+        clf = LogisticRegression(solver='lbfgs').fit(train_X, train_y)
+
+        probs = clf.predict_proba(test_X)
+        acc  = clf.score(test_X, test_y)
+        loss = log_loss(test_y, probs)
+        print(f'{season}  acc: {acc}')
+        print(f'{season} loss: {loss}')
+        print('')
+
+
+if __name__ == '__main__':
+    main()
