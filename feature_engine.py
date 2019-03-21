@@ -24,4 +24,5 @@ def k_neighbor_probs(train_X, train_y, test_X, k=24, optimize=False):
     neigh.fit(train_X, train_y)
 
     preds = neigh.predict_proba(test_X)[:,1]
-    return preds.reshape(len(preds), 1)
+    preds = preds.reshape(len(preds), 1)
+    return [x[0] for x in preds]
