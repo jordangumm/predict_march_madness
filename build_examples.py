@@ -30,14 +30,14 @@ def write_examples(filename: str, gamesfunc, test=False):
                 wteam = get_team_stats(stats, season, game['WTeamID'])
                 lteam = get_team_stats(stats, season, game['LTeamID'])
 
-                if int(game['WTeamID']) > int(game['LTeamID']) or not test:
+                if not test or int(game['WTeamID']) > int(game['LTeamID']):
                     g = '1\t'
                     g += '\t'.join([str(x) for x in [wteam['eFG%'], wteam['opp_eFG%'], wteam['TO%'], wteam['opp_TO%'], wteam['OR%'], wteam['DR%'], wteam['FTR'], wteam['opp_FTR'], lteam['eFG%'], lteam['opp_eFG%'], lteam['TO%'], lteam['opp_TO%'], lteam['OR%'], lteam['DR%'], lteam['FTR'], lteam['opp_FTR']]])
                     g += f'\t{season}'
                     g += '\n'
                     output.write(g)
 
-                if int(game['LTeamID']) > int(game['LTeamID']) or not test:
+                if not test or int(game['LTeamID']) > int(game['WTeamID']):
                     g = '0\t'
                     g += '\t'.join([str(x) for x in [lteam['eFG%'], lteam['opp_eFG%'], lteam['TO%'], lteam['opp_TO%'], lteam['OR%'], lteam['DR%'], lteam['FTR'], lteam['opp_FTR'], wteam['eFG%'], wteam['opp_eFG%'], wteam['TO%'], wteam['opp_TO%'], wteam['OR%'], wteam['DR%'], wteam['FTR'], wteam['opp_FTR']]])
                     g += f'\t{season}'
@@ -45,6 +45,6 @@ def write_examples(filename: str, gamesfunc, test=False):
                     output.write(g)
 
 
-write_examples('tourney_games.tsv', get_tournament_games)
-write_examples('regular_games.tsv', get_regular_games)
+#write_examples('tourney_games.tsv', get_tournament_games)
+#write_examples('regular_games.tsv', get_regular_games)
 write_examples('tourney_games.tsv', get_tournament_games, True)

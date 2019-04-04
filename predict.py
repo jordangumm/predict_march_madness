@@ -2,13 +2,12 @@ import click
 import pandas as pd
 import numpy as np
 
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics      import log_loss
+from sklearn.linear_model    import LogisticRegression
+from sklearn.metrics         import log_loss
 
-from datautil             import get_train_examples, get_test_examples
-from feature_engine       import k_neighbor_probs
-
-from models.seed import predict_by_seed
+from datautil       import get_train_examples, get_test_examples
+from feature_engine import k_neighbor_probs
+from build_features import build_features
 
 
 @click.command()
@@ -18,11 +17,22 @@ def main():
         train_y, train_X = get_train_examples(season)
         test_y, test_X   = get_test_examples(season)
 
-        train_column = k_neighbor_probs(train_X, train_y, train_X)
-        test_column  = k_neighbor_probs(train_X, train_y, test_X)
+        train_column = k_neighbor_probs(train_X, train_y, train_X, 24, False)
+        test_column  = k_neighbor_probs(train_X, train_y, test_X, 24, False)
 
-        train_X = np.append(train_X, train_column, axis=1)
-        test_X  = np.append(test_X, test_column, axis=1)
+        train_X['npred'] = train_column
+        test_X['npred']  = test_column
+
+        train_X = build_features(train_X, train_y)  # extending training features
+        
+        import sys
+        sys.exit()
+
+        train_X = train_X.values
+        train_y = train_y.values
+
+        test_X = test_X.values
+        test_y = test_y.values
 
         clf = LogisticRegression(solver='lbfgs').fit(train_X, train_y)
 
