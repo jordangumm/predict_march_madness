@@ -4,6 +4,7 @@
 
 """
 import numpy as np
+import pandas as pd
 
 from sklearn.neighbors       import KNeighborsClassifier
 from sklearn.model_selection import KFold
@@ -72,3 +73,27 @@ def k_neighbor_probs(train_X, train_y, test_X, k=None, optimize=True):
     preds = neigh.predict_proba(test_X)[:,1]
     preds = preds.reshape(len(preds), 1)
     return [x[0] for x in preds]
+
+
+def empirical_probs(train_X, train_y, test_X):
+    """Generate LogisticRegression probabilities.
+
+    Assumes that train_X is a one-dimensional array
+
+    """
+    from sklearn.linear_model import LogisticRegression
+
+    train_X = train_X.values.reshape(-1, 1)
+
+    clf = LogisticRegression(solver='lbfgs').fit(train_X, train_y)
+
+
+    diffs = [x for x in test_X]
+    probs = []
+    for diff in diffs:
+        probs.append(clf.predict_proba([[diff],])[0][1])
+
+    probs = pd.Series(probs)
+    #print(probs.describe())
+    return pd.Series(probs)
+
