@@ -20,7 +20,7 @@ from feature_engine import k_neighbor_probs, estimate_best_ksize
 RANKINGS = load_team_rankings('WLK', daynum=133)  # final pre-tournament rankings
 
 
-def seed_matchup_results(season: int):
+def ranking_matchup_results(season: int):
     """
     
     """
@@ -38,7 +38,7 @@ def seed_matchup_results(season: int):
     return X, y
 
 
-def seed_matchup_probs(train_X, train_y, test_X):
+def ranking_matchup_probs(train_X, train_y, test_X):
     """Calculate probabilities given 
 
     """
@@ -61,13 +61,13 @@ def main(verbose):
 
         train_X, train_y = [], []
         for s in range(2003, season):
-            X, y = seed_matchup_results(s)
+            X, y = ranking_matchup_results(s)
             train_X += X
             train_y += y
 
-        test_X, test_y = seed_matchup_results(season)
+        test_X, test_y = ranking_matchup_results(season)
 
-        probs = seed_matchup_probs(train_X, train_y, test_X)
+        probs = ranking_matchup_probs(train_X, train_y, test_X)
         acc  = accuracy_score(test_y, [round(prob) for prob in probs])
         loss = log_loss(test_y, probs)
         print(f'{season} acc: {acc}')
