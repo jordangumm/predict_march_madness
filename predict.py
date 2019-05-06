@@ -17,8 +17,8 @@ def main():
         train_y, train_X = get_train_examples(season)
         test_y, test_X   = get_test_examples(season)
 
-        tmp_train_X = pd.DataFrame()
-        tmp_test_X = pd.DataFrame()
+        #tmp_train_X = pd.DataFrame()
+        #tmp_test_X = pd.DataFrame()
         #for feature in (('eFG%', 'opp_eFG%', 'eFG%diff'), ('TO%', 'opp_TO%', 'TO%diff'),
         #                ('OR%', 'opp_OR%', 'OR%diff'), ('DR%', 'opp_DR%', 'DR%diff')):
 
@@ -31,15 +31,15 @@ def main():
         #train_X = tmp_train_X
         #test_X  = tmp_test_X
 
-        train_column = k_neighbor_probs(train_X, train_y, train_X, 24, False)
-        test_column  = k_neighbor_probs(train_X, train_y, test_X, 24, False)
+        #train_column = k_neighbor_probs(train_X, train_y, train_X, 24, False)
+        #test_column  = k_neighbor_probs(train_X, train_y, test_X, 24, False)
 
-        train_X['npred'] = train_column
-        test_X['npred']  = test_column
+        #train_X['npred'] = train_column
+        #test_X['npred']  = test_column
 
         #train_X = build_features(train_X, train_y)  # extending training features
 
-        print(train_X.keys())
+        #print(train_X.keys())
         
         train_X = train_X.values
         train_y = train_y.values
