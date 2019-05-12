@@ -26,7 +26,7 @@ def write_examples(filename: str, gamesfunc, test=False):
         output.write('\t'.join(VARS))
         output.write('\t')
         output.write('\t'.join([f'_{s}' for s in VARS]))
-        output.write('\tseason')
+        output.write('\tseason\tWTeamID\tLTeamID')  # for compatibility sake only
         output.write('\n')
 
         for season in tqdm(range(2010, 2019)):
@@ -40,7 +40,7 @@ def write_examples(filename: str, gamesfunc, test=False):
                     g += '\t'.join([str(wteam[s]) for s in VARS])
                     g += '\t'
                     g += '\t'.join([str(lteam[s]) for s in VARS])
-                    g += f'\t{season}'
+                    g += f'\t{season}\t{game["WTeamID"]}\t{game["LTeamID"]}'
                     g += '\n'
                     output.write(g)
 
@@ -49,11 +49,12 @@ def write_examples(filename: str, gamesfunc, test=False):
                     g += '\t'.join([str(lteam[s]) for s in VARS])
                     g += '\t'
                     g += '\t'.join([str(wteam[s]) for s in VARS])
-                    g += f'\t{season}'
+                    g += f'\t{season}\t{game["LTeamID"]}\t{game["WTeamID"]}'
                     g += '\n'
                     output.write(g)
 
 
-#write_examples('tourney_games.tsv', get_tournament_games)
+write_examples('tourney_games.tsv', get_tournament_games)
 write_examples('regular_games.tsv', get_regular_games)
-write_examples('tourney_games.tsv', get_tournament_games, True)
+write_examples('tourney_games_scoring.tsv', get_tournament_games, test=True)
+write_examples('regular_games_nodups.tsv', get_regular_games, test=True)
