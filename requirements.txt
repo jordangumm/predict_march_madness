@@ -1,1 +1,4 @@
+click
+pandas
 git+git://github.com/jordangumm/cbbstats.git
+https://github.com/Lasagne/Lasagne/archive/master.zip
