@@ -1,4 +1,8 @@
 click
 pandas
-git+git://github.com/jordangumm/cbbstats.git
-https://github.com/Lasagne/Lasagne/archive/master.zip
+kaggle
+sklearn
+#git+git://github.com/jordangumm/cbbstats.git
+git+git://github.com/jordangumm/automaxout.git
+Lasagne==0.1
+datautil

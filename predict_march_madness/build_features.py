@@ -8,7 +8,7 @@ import numpy  as np
 
 from sklearn.metrics import log_loss
 
-from feature_engine import k_neighbor_probs
+from predict_march_madness.feature_engine import k_neighbor_probs
 
 
 def build_features(X: pd.DataFrame, y: pd.Series):
