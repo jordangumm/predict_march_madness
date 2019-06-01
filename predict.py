@@ -2,10 +2,11 @@ import click
 import pandas as pd
 import numpy as np
 
-from automaxout.models.maxout import Maxout
-from sklearn.linear_model     import LogisticRegression
-from sklearn.preprocessing    import StandardScaler
-from sklearn.metrics          import log_loss
+from automaxout.models.maxout   import Maxout
+from automaxout.model_selection import GeneticSelector
+from sklearn.linear_model       import LogisticRegression
+from sklearn.preprocessing      import StandardScaler
+from sklearn.metrics            import log_loss
 
 from predict_march_madness.datautil       import get_train_examples, get_test_examples
 from predict_march_madness.feature_engine import k_neighbor_probs, empirical_probs
@@ -56,13 +57,27 @@ def maxout(verbose: bool):
         train_y = train_y.values
         test_y  = test_y.values
 
+        selector = GeneticSelector(
+            Maxout,
+            train_X,
+            train_y,
+            node_min=2,
+            node_max=100,
+            layer_min=1,
+            layer_max=2,
+            dropout_min=0.0,
+            dropout_max=0.5,
+            ngen=10,
+        )
+
+        num_nodes, num_layers, dropout, early_stop = selector.select_best_model()
+
         clf = Maxout(
             len(test_X[0]),
-            num_layers=2,
-            num_nodes=70,
-            dropout_rate=0.2,
-            learning_rate=1e-4,
-            weight_decay=None,
+            num_nodes=num_nodes,
+            num_layers=num_layers,
+            dropout_rate=dropout,
+            early_stop=early_stop,
             verbose=verbose,
         )
 
