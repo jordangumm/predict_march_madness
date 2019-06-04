@@ -1,0 +1,21 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+
+[packages]
+"theano==0-8-git" = {git = "https://github.com/Theano/Theano.git",ref = "15c90dd3"}
+click = "*"
+pandas = "*"
+kaggle = "*"
+sklearn = "*"
+deap = "*"
+Lasagne = "==0.1"
+cbbstats = {editable = true,path = "./../cbbstats"}
+automaxout = {editable = true,path = "./../automaxout"}
+numpy = "==1.15"
+
+[requires]
+python_version = "3.7"

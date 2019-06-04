@@ -1,8 +1,0 @@
-click
-pandas
-kaggle
-sklearn
-#git+git://github.com/jordangumm/cbbstats.git
-git+git://github.com/jordangumm/automaxout.git
-Lasagne==0.1
-datautil
