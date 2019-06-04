@@ -25,7 +25,7 @@ def get_train_examples(season):
 
 def get_test_examples(season):
     examples = tourney_games.loc[tourney_games['season'] == season]
-    examples.drop('season', axis=1, inplace=True)
+    examples = examples.drop('season', axis=1)
     examples.drop('WTeamID', axis=1, inplace=True)
     examples.drop('LTeamID', axis=1, inplace=True)
 
