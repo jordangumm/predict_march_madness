@@ -10,6 +10,8 @@ dirpath = Path(os.path.dirname(os.path.realpath(__file__)))
 tourney_games = pd.read_csv(dirpath / 'tourney_games.tsv', sep='\t')
 regular_games = pd.read_csv(dirpath / 'regular_games.tsv', sep='\t')
 
+tourney_scoring_games = pd.read_csv(dirpath / 'tourney_games_scoring.tsv', sep='\t')
+
 def get_train_examples(season):
     examples = tourney_games.loc[tourney_games['season'] < season]
     examples = examples.append(regular_games.loc[regular_games['season'] <= season])

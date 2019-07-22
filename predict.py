@@ -1,12 +1,14 @@
 import click
-import pandas as pd
-import numpy as np
+import pandas     as pd
+import numpy      as np
+import tensorflow as tf
 
 from automaxout.models.maxout   import Maxout
 from automaxout.model_selection import GeneticSelector
 from sklearn.linear_model       import LogisticRegression
 from sklearn.preprocessing      import StandardScaler
 from sklearn.metrics            import accuracy_score, log_loss
+from tensorflow                 import keras
 
 from predict_march_madness.datautil       import get_train_examples, get_test_examples
 from predict_march_madness.feature_engine import k_neighbor_probs, empirical_probs
@@ -18,9 +20,25 @@ def cli():
     pass
 
 
+def load_examples(season: int):
+    train_y, train_X = get_train_examples(season)
+    test_y, test_X   = get_test_examples(season)
+
+    scaler = StandardScaler()
+    scaler.fit(train_X)
+
+    train_X = scaler.transform(train_X)
+    test_X  = scaler.transform(test_X)
+    train_y = train_y.values
+    test_y  = test_y.values
+
+    return train_X, train_y, test_X, test_y
+
+
 @cli.command()
 def logreg():
     for season in range(2011, 2019):
+        train_X, train_y, test_X, test_y = load_examples(season)
 
         train_y, train_X = get_train_examples(season)
         test_y, test_X   = get_test_examples(season)
@@ -40,21 +58,35 @@ def logreg():
         print(f'{season} loss: {loss}')
         print('')
 
+@cli.command()
+@click.option('--season', '-s', default=2016)
+@click.option('--verbose', is_flag=True)
+def raddar(season: int, verbose: bool) -> None:
+    """Raddar 2018 WMM winner, also used to win MMM 2019 by different user.
+
+    2019 winner added select regular season data.
+    https://github.com/salmatfq/KaggleMarchMadnessFirstPlace/blob/master/win_ncaa_men.R
+
+    Python implementation based on rewrite by raddar.
+    https://www.kaggle.com/raddar/paris-madness
+
+    Quote from author:
+        My model is a single xgboost model.  I only used tournament data as my
+        training set.  I modeled the win margin using MAE metric together with cauchy 
+        objective function, which is suitable for MAE optimization.  The score
+        difference predictions were used as inputs for smoothing splines GAM
+        model to transform them to probabilities.
+        https://www.kaggle.com/c/womens-machine-learning-competition-2018/discussion/53597
+
+    """
+    pass
+
 
 @cli.command()
 @click.option('--season', '-s', default=2016)
 @click.option('--verbose', is_flag=True)
-def maxout(season: int, verbose: bool):
-    train_y, train_X = get_train_examples(season)
-    test_y, test_X   = get_test_examples(season)
-
-    scaler = StandardScaler()
-    scaler.fit(train_X)
-
-    train_X = scaler.transform(train_X)
-    test_X  = scaler.transform(test_X)
-    train_y = train_y.values
-    test_y  = test_y.values
+def select_maxout(season: int, verbose: bool):
+    train_X, train_y, test_X, test_y = load_examples(season)
 
     selector = GeneticSelector(
         Maxout,
@@ -92,6 +124,38 @@ def maxout(season: int, verbose: bool):
     loss = log_loss(test_y, [x[1] for x in probs])
     print(f'{season}  acc: {acc}')
     print(f'{season} loss: {loss}')
+
+
+@cli.command()
+@click.option('--season', default=2016)
+@click.option('--nodes', type=int, required=True)
+@click.option('--layers', type=int)
+@click.option('--dropout', type=float)
+@click.option('--stop', type=int)
+@click.option('--verbose', is_flag=True)
+def train_maxout(
+    season:  int,
+    nodes:   int,
+    layers:  int,
+    dropout: float,
+    stop:    int,
+    verbose: bool
+) -> None:
+    """Train Maxout Model."""
+    train_X, train_y, test_X, train_X = load_examples(season)
+
+    model = keras.Sequential([
+        keras.layers.Dense(nodes, activation=tf.nn.relu),
+        keras.layers.Dense(2, activation=tf.nn.softmax),
+    ])
+
+    model.compile(
+        optimizer='adam',
+        loss='sparse_categorical_crossentropy',
+        metrics=['accuracy'],
+    )
+
+    model.fit(train_X, train_y, epochs=5)
 
 
 if __name__ == '__main__':
