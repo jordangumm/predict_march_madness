@@ -7,10 +7,10 @@ import numpy  as np
 
 
 dirpath = Path(os.path.dirname(os.path.realpath(__file__)))
-tourney_games = pd.read_csv(dirpath / 'tourney_games.tsv', sep='\t')
-regular_games = pd.read_csv(dirpath / 'regular_games.tsv', sep='\t')
+tourney_games = pd.read_csv(dirpath / 'predict_march_madness/tourney_games.tsv', sep='\t')
+regular_games = pd.read_csv(dirpath / 'predict_march_madness/regular_games.tsv', sep='\t')
 
-tourney_scoring_games = pd.read_csv(dirpath / 'tourney_games_scoring.tsv', sep='\t')
+tourney_scoring_games = pd.read_csv(dirpath / 'predict_march_madness/tourney_games_scoring.tsv', sep='\t')
 
 def get_train_examples(season):
     examples = tourney_games.loc[tourney_games['season'] < season]
@@ -36,3 +36,24 @@ def get_test_examples(season):
 
     return test_y, test_X
 
+
+def get_tournament_results(compact: bool = False) -> pd.DataFrame:
+    if compact:
+        gamesfile = dirpath / 'data/original/NCAATourneyCompactResults.csv'
+    else:
+        gamesfile = dirpath / 'data/original/NCAATourneyDetailedResults.csv'
+
+    return pd.read_csv(gamesfile)
+
+
+def get_regular_results(compact: bool = False) -> pd.DataFrame:
+    if compact:
+        gamesfile = dirpath / 'data/original/RegularSeasonCompactResults.csv'
+    else:
+        gamesfile = dirpath / 'data/original/RegularSeasonDetailedResults.csv'
+
+    return pd.read_csv(gamesfile)
+
+
+def load_team_seeds() -> pd.DataFrame:
+    return pd.read_csv(dirpath / 'data/original/NCAATourneySeeds.csv')

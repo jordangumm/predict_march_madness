@@ -4,3 +4,4 @@
 *.tsv
 miniconda*
 model_instances
+data
