@@ -97,7 +97,8 @@ def prepare_data(df):
     return output
 
 
-def team_quality(season):
+def team_quality(regular_season_effects, season):
+    print('team_quality:', season)
     formula = 'win~-1+T1_TeamID+T2_TeamID'
     glm = sm.GLM.from_formula(
         formula = formula,
@@ -111,6 +112,8 @@ def team_quality(season):
     quality['quality'] = np.exp(quality['quality'])
     quality = quality.loc[quality.TeamID.str.contains('T1_')].reset_index(drop=True)
     quality['TeamID'] = quality['TeamID'].apply(lambda x: x[10:14]).astype(int)
+
+    print(quality)
 
     return quality
 
@@ -189,15 +192,7 @@ def raddar(season: int, verbose: bool) -> None:
     regular_season_effects = pd.merge(regular_season_effects, march_madness, on = ['Season','T1_TeamID','T2_TeamID'])
 
     glm_quality = pd.concat([
-        team_quality(2010),
-        team_quality(2011),
-        team_quality(2012),
-        team_quality(2013),
-        team_quality(2014),
-        team_quality(2015),
-        team_quality(2016),
-        team_quality(2017),
-        team_quality(2018),
+        team_quality(regular_season_effects, y) for y in range(2010, season+1)
     ]).reset_index(drop=True)
 
     glm_quality_T1 = glm_quality.copy()
@@ -205,8 +200,19 @@ def raddar(season: int, verbose: bool) -> None:
     glm_quality_T1.columns = ['T1_TeamID','T1_quality','Season']
     glm_quality_T2.columns = ['T2_TeamID','T2_quality','Season']
 
+    print(glm_quality_T1)
+    print(glm_quality_T1.keys())
+    print(tourney_data.keys())
+    import sys
+    sys.exit('')
+
     tourney_data = pd.merge(tourney_data, glm_quality_T1, on = ['Season', 'T1_TeamID'], how = 'left')
     tourney_data = pd.merge(tourney_data, glm_quality_T2, on = ['Season', 'T2_TeamID'], how = 'left')
+
+    print(tourney_data)
+
+    import sys
+    sys.exit('')
 
     seeds['seed'] = seeds['Seed'].apply(lambda x: int(x[1:3]))
 
@@ -231,6 +237,7 @@ def raddar(season: int, verbose: bool) -> None:
                ["Seed_diff"] + ["T1_quality","T2_quality"]
 
     X = tourney_data[features].values
+    print(tourney_data[features])
     dtrain = xgb.DMatrix(X, label = y)
     print('got here')
 
