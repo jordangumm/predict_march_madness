@@ -54,7 +54,7 @@ def write_examples(filename: str, gamesfunc, test=False):
                     output.write(g)
 
 
-write_examples('tourney_games.tsv', get_tournament_games)
-write_examples('regular_games.tsv', get_regular_games)
-write_examples('tourney_games_scoring.tsv', get_tournament_games, test=True)
-write_examples('regular_games_nodups.tsv', get_regular_games, test=True)
+write_examples('../data/tourney_games.tsv', get_tournament_games)
+write_examples('../data/regular_games.tsv', get_regular_games)
+write_examples('../data/tourney_games_nodups.tsv', get_tournament_games, test=True)
+write_examples('../data/regular_games_nodups.tsv', get_regular_games, test=True)

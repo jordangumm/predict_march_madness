@@ -17,7 +17,7 @@ from sklearn.metrics            import accuracy_score, log_loss
 from sklearn.model_selection    import KFold
 from tensorflow                 import keras
 
-from datautil                             import (get_train_examples,
+from predict_march_madness.datautil       import (get_train_examples,
                                                   get_test_examples,
                                                   get_tournament_results,
                                                   get_regular_results,
