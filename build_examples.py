@@ -1,4 +1,5 @@
-from typing import Dict, Union
+from pathlib import Path
+from typing  import Dict, Union
 
 import pandas as pd
 
@@ -53,8 +54,11 @@ def write_examples(filename: str, gamesfunc, test=False):
                     g += '\n'
                     output.write(g)
 
+data_path = Path('predict_march_madness/data')
+if not data_path.exists():
+    data_path.mkdir()
 
-write_examples('../data/tourney_games.tsv', get_tournament_games)
-write_examples('../data/regular_games.tsv', get_regular_games)
-write_examples('../data/tourney_games_nodups.tsv', get_tournament_games, test=True)
-write_examples('../data/regular_games_nodups.tsv', get_regular_games, test=True)
+write_examples('predict_march_madness/data/tourney_games.tsv', get_tournament_games)
+write_examples('predict_march_madness/data/regular_games.tsv', get_regular_games)
+write_examples('predict_march_madness/data/tourney_games_nodups.tsv', get_tournament_games, test=True)
+write_examples('predict_march_madness/data/regular_games_nodups.tsv', get_regular_games, test=True)

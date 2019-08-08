@@ -10,6 +10,8 @@ import xgboost         as xgb
 
 #from automaxout.models.maxout   import Maxout
 from automaxout.model_selection import GeneticSelector
+from cbbstats.data              import load_team_seeds
+from cbbstats.game              import get_tournament_results, get_regular_results
 from scipy.interpolate          import UnivariateSpline
 from sklearn.linear_model       import LogisticRegression
 from sklearn.preprocessing      import StandardScaler
@@ -17,11 +19,7 @@ from sklearn.metrics            import accuracy_score, log_loss
 from sklearn.model_selection    import KFold
 from tensorflow                 import keras
 
-from predict_march_madness.datautil       import (get_train_examples,
-                                                  get_test_examples,
-                                                  get_tournament_results,
-                                                  get_regular_results,
-                                                  load_team_seeds)
+from predict_march_madness.datautil       import get_train_examples, get_test_examples
 from predict_march_madness.feature_engine import k_neighbor_probs, empirical_probs
 from predict_march_madness.build_features import build_features
 
