@@ -1,10 +1,13 @@
 import os
+import random
 
 import click
 import collections
 import numpy           as np
 import pandas          as pd
 import xgboost         as xgb
+
+from tqdm import tqdm
 
 from automaxout.models.maxout   import Maxout
 from automaxout.model_selection import GeneticSelector
@@ -113,6 +116,25 @@ def select_maxout(season: int, verbose: bool) -> None:
     print(f'{season} loss: {loss}')
 
 
+def subsample(X, y):
+    """Subsample for boosted aggregation.
+
+    Args:
+        X: two dimensional feature array
+        y: class array
+
+    """
+    subX = []
+    suby = []
+    
+    while len(subX) < len(X):
+        index = random.randint(0, len(X)-1)
+        subX.append(X[index])
+        suby.append(y[index])
+
+    return subX, suby
+
+
 @cli.command()
 @click.option('--season', '-s', default=2016)
 @click.option('--verbose', is_flag=True)
@@ -128,17 +150,20 @@ def maxout(season: int, verbose: bool) -> None:
 
     num_nodes, num_layers, dropout, early_stop = 10, 1, 0.9, 4
 
-    clf = Maxout(
-        len(test_X[0]),
-        num_nodes=num_nodes,
-        num_layers=num_layers,
-        dropout_rate=dropout,
-        early_stop=early_stop,
-        verbose=verbose,
-    )
-
-    # FIXME: integrate bagging procedure
-    probs = clf.fit(train_X, train_y, test_X, test_y, test_X)
+    random.seed(1)
+    probs = []
+    for _ in tqdm(range(10)):
+        tmp_X, tmp_y = subsample(train_X, train_y)
+        clf = Maxout(
+            len(test_X[0]),
+            num_nodes=num_nodes,
+            num_layers=num_layers,
+            dropout_rate=dropout,
+            early_stop=early_stop,
+            verbose=verbose,
+        )
+        probs.append(clf.fit(tmp_X, tmp_y, test_X, test_y, test_X))
+    probs = np.mean(probs, axis=0)
 
     acc  = accuracy_score(test_y, [np.rint(x[1]) for x in probs])
     loss = log_loss(test_y, [x[1] for x in probs])
