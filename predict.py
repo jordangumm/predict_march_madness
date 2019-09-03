@@ -42,33 +42,39 @@ def load_examples(season: int):
 
 
 @cli.command()
-def logreg():
-    for season in range(2011, 2019):
-        train_X, train_y, test_X, test_y = load_examples(season)
+@click.option('--season', '-s', default=2016)
+def logreg(season: int) -> None:
+    """Predict games using Logistic Regression.
 
-        train_y, train_X = get_train_examples(season)
-        test_y, test_X   = get_test_examples(season)
+    Args:
+        season: tournament year to build model for and predict
 
-        train_X = train_X.values
-        train_y = train_y.values
+    """
+    train_X, train_y, test_X, test_y = load_examples(season)
 
-        test_X = test_X.values
-        test_y = test_y.values
+    train_y, train_X = get_train_examples(season)
+    test_y, test_X   = get_test_examples(season)
 
-        clf = LogisticRegression(solver='lbfgs').fit(train_X, train_y)
+    train_X = train_X.values
+    train_y = train_y.values
 
-        probs = clf.predict_proba(test_X)
-        acc  = clf.score(test_X, test_y)
-        loss = log_loss(test_y, probs)
-        print(f'{season}  acc: {acc}')
-        print(f'{season} loss: {loss}')
-        print('')
+    test_X = test_X.values
+    test_y = test_y.values
+
+    clf = LogisticRegression(solver='lbfgs').fit(train_X, train_y)
+
+    probs = clf.predict_proba(test_X)
+    acc  = clf.score(test_X, test_y)
+    loss = log_loss(test_y, probs)
+    print(f'{season}  acc: {acc}')
+    print(f'{season} loss: {loss}')
+    print('')
 
 
 @cli.command()
 @click.option('--season', '-s', default=2016)
 @click.option('--verbose', is_flag=True)
-def select_maxout(season: int, verbose: bool):
+def select_maxout(season: int, verbose: bool) -> None:
     train_X, train_y, test_X, test_y = load_examples(season)
 
     selector = GeneticSelector(
@@ -110,10 +116,17 @@ def select_maxout(season: int, verbose: bool):
 @cli.command()
 @click.option('--season', '-s', default=2016)
 @click.option('--verbose', is_flag=True)
-def maxout(season: int, verbose: bool):
+def maxout(season: int, verbose: bool) -> None:
+    """Predict tournament games using Maxout Network.
+
+    Args:
+       season:  tournmanet year to build model for and predict
+       verbose: whether or not to display epoch information (default=False)
+
+    """
     train_X, train_y, test_X, test_y = load_examples(season)
 
-    num_nodes, num_layers, dropout, early_stop = 10, 1, 0.5, 10
+    num_nodes, num_layers, dropout, early_stop = 10, 1, 0.9, 4
 
     clf = Maxout(
         len(test_X[0]),
@@ -124,6 +137,7 @@ def maxout(season: int, verbose: bool):
         verbose=verbose,
     )
 
+    # FIXME: integrate bagging procedure
     probs = clf.fit(train_X, train_y, test_X, test_y, test_X)
 
     acc  = accuracy_score(test_y, [np.rint(x[1]) for x in probs])
