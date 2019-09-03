@@ -150,7 +150,7 @@ def maxout(season: int, verbose: bool) -> None:
 
     num_nodes, num_layers, dropout, early_stop = 10, 1, 0.9, 4
 
-    random.seed(1)
+    random.seed()
     probs = []
     for _ in tqdm(range(10)):
         tmp_X, tmp_y = subsample(train_X, train_y)
