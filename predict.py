@@ -31,7 +31,7 @@ def cli():
 
 def load_examples(season: int):
     train_y, train_X = get_train_examples(season)
-    test_y, test_X   = get_test_examples(season)
+    test_y, test_X, test_info   = get_test_examples(season)
 
     scaler = StandardScaler()
     scaler.fit(train_X)
@@ -41,7 +41,7 @@ def load_examples(season: int):
     train_y = train_y.values
     test_y  = test_y.values
 
-    return train_X, train_y, test_X, test_y
+    return train_X, train_y, test_X, test_y, test_info
 
 
 @cli.command()
@@ -146,7 +146,7 @@ def maxout(season: int, verbose: bool) -> None:
        verbose: whether or not to display epoch information (default=False)
 
     """
-    train_X, train_y, test_X, test_y = load_examples(season)
+    train_X, train_y, test_X, test_y, team_info = load_examples(season)
 
     num_nodes, num_layers, dropout, early_stop = 10, 1, 0.9, 4
 
