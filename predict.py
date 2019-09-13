@@ -9,7 +9,8 @@ import xgboost         as xgb
 
 from automaxout.models.maxout   import Maxout, MaxoutDense, MaxoutResidual
 from automaxout.model_selection import GeneticSelector
-from cbbstats.data              import load_team_seeds
+from cbbstats.data              import load_team_seeds, load_teams
+from cbbstats.team              import get_team_seed, get_team_name
 from cbbstats.game              import get_tournament_results, get_regular_results
 from scipy.interpolate          import UnivariateSpline
 from sklearn.linear_model       import LogisticRegression
@@ -91,12 +92,28 @@ def subsample(X, y):
     return subX, suby
 
 
-def evaluate(probs, test_y):
+def evaluate(probs, test_y, team_info, season):
+    seeds = load_team_seeds()
+    teams = load_teams()
     final_probs = np.mean(probs, axis=0)
+
+    print(f'Predicting {season}')
+    print('Accuracy\tLog Loss\tVariance')
+    for i, prob in enumerate(final_probs):
+        if prob[1].round() != test_y[i].round():
+            info = team_info.iloc[i]
+
+            wseed = get_team_seed(seeds, season, info['WTeamID'])
+            lseed = get_team_seed(seeds, season, info['LTeamID'])
+
+            wname = get_team_name(teams, info['WTeamID'])
+            lname = get_team_name(teams, info['LTeamID'])
+
+            print(f'missed game {i}: {prob[1]} {wseed}.{wname} over {lseed}.{lname}')
 
     acc  = accuracy_score(test_y, [np.rint(x[1]) for x in final_probs])
     loss = log_loss(test_y, [x[1] for x in final_probs])
-    print(f'{acc:.4f}\t{loss:.4f}\t{np.var(probs):.4f}')
+    print(f'{acc:.6f}\t{loss:.6f}\t{np.var(probs):.6f}')
 
 
 def train(season: int, numbags: int, verbose: bool, model: Maxout) -> None:
@@ -112,12 +129,10 @@ def train(season: int, numbags: int, verbose: bool, model: Maxout) -> None:
     num_nodes, num_layers, dropout, early_stop = 10, 1, 0.9, 1
 
     train_X, train_y, test_X, test_y, team_info = load_examples(season)
-    print(f'Predicting {season} using {early_stop} early stopping criteria')
-    print('Accuracy\tLog Loss\tVariance')
 
     random.seed()
     probs = []
-    for _ in range(3):
+    for _ in range(1):
         tmp_X, tmp_y = subsample(train_X, train_y)
         clf = model(
             len(test_X[0]),
@@ -128,7 +143,7 @@ def train(season: int, numbags: int, verbose: bool, model: Maxout) -> None:
             verbose=verbose,
         )
         probs.append(clf.fit(tmp_X, tmp_y, train_X, train_y, test_X))
-        evaluate(probs, test_y)
+    evaluate(probs, test_y, team_info, season)
 
 
 @cli.command()

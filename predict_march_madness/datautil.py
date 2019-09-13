@@ -49,7 +49,7 @@ def get_test_examples(season: int) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataF
         class, features, team info
 
     """
-    examples  = tourney_games.loc[tourney_games['season'] == season]
+    examples  = tourney_scoring_games.loc[tourney_scoring_games['season'] == season]
     team_info = add_team_info(examples[['season', 'WTeamID', 'LTeamID']])
 
     examples.drop('season',  axis=1, inplace=True)
