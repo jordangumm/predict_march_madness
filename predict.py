@@ -7,8 +7,6 @@ import numpy           as np
 import pandas          as pd
 import xgboost         as xgb
 
-from tqdm import tqdm
-
 from automaxout.models.maxout   import Maxout, MaxoutDense, MaxoutResidual
 from automaxout.model_selection import GeneticSelector
 from cbbstats.data              import load_team_seeds
@@ -31,7 +29,7 @@ def cli():
 
 def load_examples(season: int):
     train_y, train_X = get_train_examples(season)
-    test_y, test_X, test_info   = get_test_examples(season)
+    test_y, test_X, test_info = get_test_examples(season)
 
     scaler = StandardScaler()
     scaler.fit(train_X)
@@ -74,6 +72,113 @@ def logreg(season: int) -> None:
     print('')
 
 
+def subsample(X, y):
+    """Subsample for boosted aggregation.
+
+    Args:
+        X: two dimensional feature array
+        y: class array
+
+    """
+    subX = []
+    suby = []
+    
+    while len(subX) < len(X):
+        index = random.randint(0, len(X)-1)
+        subX.append(X[index])
+        suby.append(y[index])
+
+    return subX, suby
+
+
+def evaluate(probs, test_y):
+    final_probs = np.mean(probs, axis=0)
+
+    acc  = accuracy_score(test_y, [np.rint(x[1]) for x in final_probs])
+    loss = log_loss(test_y, [x[1] for x in final_probs])
+    print(f'{acc:.4f}\t{loss:.4f}\t{np.var(probs):.4f}')
+
+
+def train(season: int, numbags: int, verbose: bool, model: Maxout) -> None:
+    """Predict tournament games using Maxout Network.
+
+    Args:
+       season:  tournmanet year to predict
+       numbags: number of boosted training sessions to aggregate
+       verbose: whether or not to display epoch information (default=False)
+       model:   maxout model class to use
+
+    """
+    num_nodes, num_layers, dropout, early_stop = 10, 1, 0.9, 1
+
+    train_X, train_y, test_X, test_y, team_info = load_examples(season)
+    print(f'Predicting {season} using {early_stop} early stopping criteria')
+    print('Accuracy\tLog Loss\tVariance')
+
+    random.seed()
+    probs = []
+    for _ in range(3):
+        tmp_X, tmp_y = subsample(train_X, train_y)
+        clf = model(
+            len(test_X[0]),
+            num_nodes=num_nodes,
+            num_layers=num_layers,
+            dropout_rate=dropout,
+            early_stop=early_stop,
+            verbose=verbose,
+        )
+        probs.append(clf.fit(tmp_X, tmp_y, train_X, train_y, test_X))
+        evaluate(probs, test_y)
+
+
+@cli.command()
+@click.option('--season',  '-s', default=2016)
+@click.option('--numbags', '-n', default=3)
+@click.option('--verbose', is_flag=True)
+def maxout(season: int, numbags: int, verbose: bool) -> None:
+    """Predict tournament games using Residual Maxout Network.
+
+    Args:
+        season:  tournamnet year to predict
+        numbags: number of boosted training sessions to aggregate
+        verbose: whether to display model training information (default=false)
+
+    """
+    train(season, numbags, verbose, Maxout)
+
+
+@cli.command()
+@click.option('--season', '-s', default=2016)
+@click.option('--numbags', '-n', default=3)
+@click.option('--verbose', is_flag=True)
+def residual(season: int, numbags: int, verbose: bool) -> None:
+    """Predict tournament games using Residual Maxout Network.
+
+    Args:
+        season:  tournamnet year to predict
+        numbags: number of boosted training sessions to aggregate
+        verbose: whether to display model training information (default=false)
+
+    """
+    train(season, numbags, verbose, MaxoutResidual)
+
+
+@cli.command()
+@click.option('--season', '-s', default=2016)
+@click.option('--numbags', '-n', default=3)
+@click.option('--verbose', is_flag=True)
+def dense(season: int, numbags: int, verbose: bool) -> None:
+    """Predict tournament games using Dense Maxout Network.
+
+    Args:
+        season:  tournamnet year to predict
+        numbags: number of boosted training sessions to aggregate
+        verbose: whether to display model training information (default=false)
+
+    """
+    train(season, numbags, verbose, MaxoutDense)
+
+
 @cli.command()
 @click.option('--season', '-s', default=2016)
 @click.option('--verbose', is_flag=True)
@@ -114,102 +219,6 @@ def select_maxout(season: int, verbose: bool) -> None:
     loss = log_loss(test_y, [x[1] for x in probs])
     print(f'{season}  acc: {acc}')
     print(f'{season} loss: {loss}')
-
-
-def subsample(X, y):
-    """Subsample for boosted aggregation.
-
-    Args:
-        X: two dimensional feature array
-        y: class array
-
-    """
-    subX = []
-    suby = []
-    
-    while len(subX) < len(X):
-        index = random.randint(0, len(X)-1)
-        subX.append(X[index])
-        suby.append(y[index])
-
-    return subX, suby
-
-
-def train(season: int, verbose: bool, model: Maxout) -> None:
-    """Predict tournament games using Maxout Network.
-
-    Args:
-       season:  tournmanet year to predict
-       verbose: whether or not to display epoch information (default=False)
-       model:   maxout model class to use
-
-    """
-    train_X, train_y, test_X, test_y, team_info = load_examples(season)
-
-    num_nodes, num_layers, dropout, early_stop = 10, 1, 0.9, 4
-
-    random.seed()
-    probs = []
-    for _ in tqdm(range(3)):
-        tmp_X, tmp_y = subsample(train_X, train_y)
-        clf = model(
-            len(test_X[0]),
-            num_nodes=num_nodes,
-            num_layers=num_layers,
-            dropout_rate=dropout,
-            early_stop=early_stop,
-            verbose=verbose,
-        )
-        probs.append(clf.fit(tmp_X, tmp_y, test_X, test_y, test_X))
-    final_probs = np.mean(probs, axis=0)
-
-    acc  = accuracy_score(test_y, [np.rint(x[1]) for x in final_probs])
-    loss = log_loss(test_y, [x[1] for x in final_probs])
-    print(f'{season}  acc: {acc}')
-    print(f'{season} loss: {loss}')
-    print(f'{season}  var: {np.var(probs)}')
-
-
-@cli.command()
-@click.option('--season', '-s', default=2016)
-@click.option('--verbose', is_flag=True)
-def maxout(season: int, verbose: bool) -> None:
-    """Predict tournament games using Residual Maxout Network.
-
-    Args:
-        season:  tournamnet year to predict
-        verbose: whether to display model training information (default=false)
-
-    """
-    train(season, verbose, Maxout)
-
-
-@cli.command()
-@click.option('--season', '-s', default=2016)
-@click.option('--verbose', is_flag=True)
-def residual(season: int, verbose: bool) -> None:
-    """Predict tournament games using Residual Maxout Network.
-
-    Args:
-        season:  tournamnet year to predict
-        verbose: whether to display model training information (default=false)
-
-    """
-    train(season, verbose, MaxoutResidual)
-
-
-@cli.command()
-@click.option('--season', '-s', default=2016)
-@click.option('--verbose', is_flag=True)
-def dense(season: int, verbose: bool) -> None:
-    """Predict tournament games using Dense Maxout Network.
-
-    Args:
-        season:  tournamnet year to predict
-        verbose: whether to display model training information (default=false)
-
-    """
-    train(season, verbose, MaxoutDense)
 
 
 if __name__ == '__main__':
