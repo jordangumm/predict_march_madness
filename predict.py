@@ -43,6 +43,30 @@ def load_examples(season: int):
     return train_X, train_y, test_X, test_y, test_info
 
 
+def evaluate(probs, test_y, team_info, season):
+    seeds = load_team_seeds()
+    teams = load_teams()
+    final_probs = np.mean(probs, axis=0)
+
+    print(f'Predicting {season}')
+    print('Accuracy\tLog Loss\tVariance')
+    for i, prob in enumerate(final_probs):
+        if prob[1].round() != test_y[i].round():
+            info = team_info.iloc[i]
+
+            wseed = get_team_seed(seeds, season, info['WTeamID'])
+            lseed = get_team_seed(seeds, season, info['LTeamID'])
+
+            wname = get_team_name(teams, info['WTeamID'])
+            lname = get_team_name(teams, info['LTeamID'])
+
+            print(f'missed {i}: {prob[1]} {wseed}.{wname} over {lseed}.{lname}')
+
+    acc  = accuracy_score(test_y, [np.rint(x[1]) for x in final_probs])
+    loss = log_loss(test_y, [x[1] for x in final_probs])
+    print(f'{acc:.6f}\t{loss:.6f}\t{np.var(probs):.6f}')
+
+
 @cli.command()
 @click.option('--season', '-s', default=2016)
 def logreg(season: int) -> None:
@@ -52,25 +76,12 @@ def logreg(season: int) -> None:
         season: tournament year to build model for and predict
 
     """
-    train_X, train_y, test_X, test_y = load_examples(season)
+    train_X, train_y, test_X, test_y, team_info = load_examples(season)
 
-    train_y, train_X = get_train_examples(season)
-    test_y, test_X   = get_test_examples(season)
-
-    train_X = train_X.values
-    train_y = train_y.values
-
-    test_X = test_X.values
-    test_y = test_y.values
-
-    clf = LogisticRegression(solver='lbfgs').fit(train_X, train_y)
-
+    clf   = LogisticRegression(solver='lbfgs').fit(train_X, train_y)
     probs = clf.predict_proba(test_X)
-    acc  = clf.score(test_X, test_y)
-    loss = log_loss(test_y, probs)
-    print(f'{season}  acc: {acc}')
-    print(f'{season} loss: {loss}')
-    print('')
+    
+    evaluate([probs], test_y, team_info, season)
 
 
 def subsample(X, y):
@@ -90,30 +101,6 @@ def subsample(X, y):
         suby.append(y[index])
 
     return subX, suby
-
-
-def evaluate(probs, test_y, team_info, season):
-    seeds = load_team_seeds()
-    teams = load_teams()
-    final_probs = np.mean(probs, axis=0)
-
-    print(f'Predicting {season}')
-    print('Accuracy\tLog Loss\tVariance')
-    for i, prob in enumerate(final_probs):
-        if prob[1].round() != test_y[i].round():
-            info = team_info.iloc[i]
-
-            wseed = get_team_seed(seeds, season, info['WTeamID'])
-            lseed = get_team_seed(seeds, season, info['LTeamID'])
-
-            wname = get_team_name(teams, info['WTeamID'])
-            lname = get_team_name(teams, info['LTeamID'])
-
-            print(f'missed game {i}: {prob[1]} {wseed}.{wname} over {lseed}.{lname}')
-
-    acc  = accuracy_score(test_y, [np.rint(x[1]) for x in final_probs])
-    loss = log_loss(test_y, [x[1] for x in final_probs])
-    print(f'{acc:.6f}\t{loss:.6f}\t{np.var(probs):.6f}')
 
 
 def train(season: int, numbags: int, verbose: bool, model: Maxout) -> None:
