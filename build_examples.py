@@ -5,13 +5,14 @@ import pandas as pd
 
 from tqdm import tqdm
 
-from cbbstats.data import load_team_stats, load_team_seeds
+from cbbstats.data import load_team_stats, load_team_seeds, load_team_rankings
 from cbbstats.game import get_tournament_games, get_regular_games
-from cbbstats.team import get_team_stats
+from cbbstats.team import get_team_stats, get_team_seed, get_team_ranking
 
 
-stats = load_team_stats()
-seeds = load_team_seeds()
+STATS = load_team_stats()
+SEEDS = load_team_seeds()
+RANKS = load_team_rankings('WLK', daynum=133)
 
 VARS = ['eFG%', 'opp_eFG%', 'TO%', 'opp_TO%', 'OR%', 'DR%', 'FTR']
 
@@ -27,30 +28,38 @@ def write_examples(filename: str, gamesfunc, test=False):
         output.write('\t'.join(VARS))
         output.write('\t')
         output.write('\t'.join([f'_{s}' for s in VARS]))
-        output.write('\tseason\tWTeamID\tLTeamID')  # for compatibility sake only
+        output.write('\tseason\tTeamOne\tTeamOneSeed\tTeamOneRank\tTeamTwo\tTeamTwoSeed\tTeamTwoRank')
         output.write('\n')
 
         for season in tqdm(range(2010, 2019)):
             for game in gamesfunc(season):
+                wteam = int(game['WTeamID'])
+                lteam = int(game['LTeamID'])
 
-                wteam = get_team_stats(stats, season, game['WTeamID'])
-                lteam = get_team_stats(stats, season, game['LTeamID'])
+                wteam_stats = get_team_stats(STATS, season, wteam)
+                lteam_stats = get_team_stats(STATS, season, lteam)
 
-                if not test or int(game['WTeamID']) > int(game['LTeamID']):
+                wteam_seed = get_team_seed(SEEDS, season, wteam)
+                lteam_seed = get_team_seed(SEEDS, season, lteam)
+                
+                wteam_rank = get_team_ranking(RANKS, season, wteam)
+                lteam_rank = get_team_ranking(RANKS, season, lteam)
+
+                if not test or wteam > lteam:
                     g = '1\t'
-                    g += '\t'.join([str(wteam[s]) for s in VARS])
+                    g += '\t'.join([str(wteam_stats[s]) for s in VARS])
                     g += '\t'
-                    g += '\t'.join([str(lteam[s]) for s in VARS])
-                    g += f'\t{season}\t{game["WTeamID"]}\t{game["LTeamID"]}'
+                    g += '\t'.join([str(lteam_stats[s]) for s in VARS])
+                    g += f'\t{season}\t{wteam}\t{wteam_seed}\t{wteam_rank}\t{lteam}\t{lteam_seed}\t{lteam_rank}'
                     g += '\n'
                     output.write(g)
 
-                if not test or int(game['LTeamID']) > int(game['WTeamID']):
+                if not test or lteam > wteam:
                     g = '0\t'
-                    g += '\t'.join([str(lteam[s]) for s in VARS])
+                    g += '\t'.join([str(lteam_stats[s]) for s in VARS])
                     g += '\t'
-                    g += '\t'.join([str(wteam[s]) for s in VARS])
-                    g += f'\t{season}\t{game["LTeamID"]}\t{game["WTeamID"]}'
+                    g += '\t'.join([str(wteam_stats[s]) for s in VARS])
+                    g += f'\t{season}\t{lteam}\t{lteam_seed}\t{lteam_rank}\t{wteam}\t{wteam_seed}\t{wteam_rank}'
                     g += '\n'
                     output.write(g)
 

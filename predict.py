@@ -43,28 +43,73 @@ def load_examples(season: int):
 
 
 def evaluate(probs, test_y, team_info, season):
-    seeds = load_team_seeds()
-    teams = load_teams()
     final_probs = np.mean(probs, axis=0)
-
-    print(f'Predicting {season}')
-    print('Accuracy\tLog Loss\tVariance')
-    for i, prob in enumerate(final_probs):
-        if prob[1].round() != test_y[i].round():
-            info = team_info.iloc[i]
-
-            wseed = get_team_seed(seeds, season, info['WTeamID'])
-            lseed = get_team_seed(seeds, season, info['LTeamID'])
-
-            wname = get_team_name(teams, info['WTeamID'])
-            lname = get_team_name(teams, info['LTeamID'])
-
-            print(f'missed {i}: {prob[1]} {wseed}.{wname} over {lseed}.{lname}')
 
     acc  = accuracy_score(test_y, [np.rint(x[1]) for x in final_probs])
     loss = log_loss(test_y, [x[1] for x in final_probs])
     print(f'{acc:.6f}\t{loss:.6f}\t{np.var(probs):.6f}')
 
+
+def print_misses(probs, test_y, team_info, season):
+    teams = load_teams()
+    final_probs = np.mean(probs, axis=0)
+    for i, prob in enumerate(final_probs):
+        if prob[1].round() != test_y[i].round():
+            info = team_info.iloc[i]
+
+            wseed = info['WTeamSeed']
+            lseed = info['LTeamSeed']
+
+            wname = get_team_name(teams, info['WTeamID'])
+            lname = get_team_name(teams, info['LTeamID'])
+
+            print(f'{i}: {prob[1]} {wseed}.{wname} over {lseed}.{lname}')
+
+
+def get_even_match(probs):
+    """Find closest to even match in game probability list.
+
+    Args:
+        probs: list of game probabilities
+
+    Returns:
+        Index of game with most even win probabilities.
+
+    """
+    nearest_index   = 0
+    current_nearest = 0.5
+    for i, prob in enumerate(probs):
+        if abs(prob[1] - 0.5) < current_nearest:
+            current_nearest = abs(prob[1] - 0.5)
+            nearest_index = i
+    return nearest_index
+
+
+def probability_calibration(probs, team_info):
+    """Generate two submissions with probabilities calibrated for optimized score."""
+    new_probs_one = []
+    new_probs_two = []
+    for game_index in range(len(probs)):
+        info = team_info.iloc[game_index]
+        if (info['WTeamSeed'] == 1 and info['LTeamSeed'] == 16) or (info['LTeamSeed'] == 1 and info['WTeamSeed'] == 16):
+            one_seed    = info['WTeamID'] if info['WTeamSeed'] == 1 else info['LTeamID']
+            other_seed  = info['LTeamID'] if info['LTeamSeed'] == 16 else info['WTeamID']
+
+            if one_seed > other_seed:
+                new_probs_one.append([0.001, 0.999])
+                new_probs_two.append([0.001, 0.999])
+            else:
+                new_probs_one.append([0.999, 0.001])
+                new_probs_two.append([0.999, 0.001])
+            continue
+
+        new_probs_one.append(probs[game_index])
+        new_probs_two.append(probs[game_index])
+
+    nearest_index = get_even_match(probs)
+    new_probs_one[nearest_index] = [0.999, 0.001]
+    new_probs_two[nearest_index] = [0.001, 0.999]
+    return new_probs_one, new_probs_two
 
 @cli.command()
 @click.option('--season', '-s', default=2016)
@@ -81,6 +126,15 @@ def logreg(season: int) -> None:
     probs = clf.predict_proba(test_X)
     
     evaluate([probs], test_y, team_info, season)
+
+    sub_one, sub_two = probability_calibration(probs, team_info)
+
+    print('submission one')
+    evaluate([sub_one], test_y, team_info, season)
+    print('submission two')
+    evaluate([sub_two], test_y, team_info, season)
+    print('misses')
+    print_misses([probs], test_y, team_info, season)
 
 
 def subsample(X, y):
@@ -112,13 +166,15 @@ def train(season: int, numbags: int, verbose: bool, model: Maxout) -> None:
        model:   maxout model class to use
 
     """
-    num_nodes, num_layers, dropout, early_stop = 10, 1, 0.9, 1
+    num_nodes, num_layers, dropout, early_stop = 20, 2, 0.9, 2
 
     train_X, train_y, test_X, test_y, team_info = load_examples(season)
+    print(f'Predicting {season}')
+    print('Accuracy\tLog Loss\tVariance')
 
     random.seed()
     probs = []
-    for _ in range(1):
+    for _ in range(numbags):
         tmp_X, tmp_y = subsample(train_X, train_y)
         clf = model(
             len(test_X[0]),
@@ -129,7 +185,19 @@ def train(season: int, numbags: int, verbose: bool, model: Maxout) -> None:
             verbose=verbose,
         )
         probs.append(clf.fit(tmp_X, tmp_y, train_X, train_y, test_X))
-    evaluate(probs, test_y, team_info, season)
+        evaluate(probs, test_y, team_info, season)
+    print_misses(probs, test_y, team_info, season)
+
+    probs = np.mean(probs, axis=0)
+
+    sub_one, sub_two = probability_calibration(probs, team_info)
+
+    print('submission one')
+    evaluate([sub_one], test_y, team_info, season)
+    print('submission two')
+    evaluate([sub_two], test_y, team_info, season)
+    print('misses')
+    print_misses([probs], test_y, team_info, season)
 
 
 @cli.command()
