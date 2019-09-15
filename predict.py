@@ -20,7 +20,6 @@ from sklearn.model_selection    import KFold
 
 from predict_march_madness.datautil       import get_train_examples, get_test_examples
 from predict_march_madness.feature_engine import k_neighbor_probs, empirical_probs
-from predict_march_madness.build_features import build_features
 
 
 @click.group()

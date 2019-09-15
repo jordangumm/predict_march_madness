@@ -2,6 +2,7 @@
 *__pycache__*
 *.swp
 *.tsv
+*.egg*
 miniconda*
 model_instances
 data

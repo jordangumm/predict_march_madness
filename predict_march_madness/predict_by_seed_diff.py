@@ -1,4 +1,3 @@
-import click
 import pandas as pd
 import numpy as np
 
@@ -10,16 +9,13 @@ from sklearn.metrics      import log_loss, accuracy_score
 from cbbstats.data import load_team_seeds
 from cbbstats.game import get_tournament_games
 from cbbstats.team import get_team_seed
-from datautil      import get_train_examples, get_test_examples
 
 
 SEEDS = load_team_seeds()
 
-def seed_matchup_results(season: int) -> Dict[str, float]:
-    """
 
-    
-    """
+def seed_matchup_results(season: int) -> Dict[str, float]:
+    """Produce empirical seed matchup probabilities."""
     outcomes = {}
     for season in range(1985, season):
         games = get_tournament_games(season)
@@ -35,26 +31,36 @@ def seed_matchup_results(season: int) -> Dict[str, float]:
     return outcomes
 
 
-def seed_probs(season, verbose=False):
+def seed_probs(games: pd.DataFrame, season: int):
+    """Add empirical seed difference win probabilities.
 
+    Args:
+        games:       DataFrame of games
+        season:      test season
+
+    Returns:
+        Empirical game probabilities.
+
+    """
     outcomes = seed_matchup_results(season)
 
     test_y = []
     probs = []
-    for game in get_tournament_games(season):
-        wteam = game['WTeamID']
-        lteam = game['LTeamID']
+    for _, game in games.iterrows():
+        wteam  = game['WTeamID']
+        lteam  = game['LTeamID']
+        season = int(game['season'])
         if game['WTeamID'] > game['LTeamID']:
             hseed = get_team_seed(SEEDS, season, wteam)
             lseed = get_team_seed(SEEDS, season, lteam)
-            if hseed == 16 and lseed == 16:
-                continue
+            #if hseed == 16 and lseed == 16:
+            #    continue
             test_y.append(1)
         else:
             lseed = get_team_seed(SEEDS, season, wteam)
             hseed = get_team_seed(SEEDS, season, lteam)
-            if hseed == 16 and lseed == 16:
-                continue
+            #if hseed == 16 and lseed == 16:
+            #    continue
             test_y.append(0)
 
         hline = f'{hseed - lseed}'
@@ -75,20 +81,31 @@ def seed_probs(season, verbose=False):
         prob = hocc / (hocc + locc)
         probs.append(prob)
 
-    acc  = accuracy_score(test_y, [round(prob) for prob in probs])
-    loss = log_loss(test_y, probs)
-    print(f'{season}  acc: {acc}')
-    print(f'{season} loss: {loss}')
-    print('')
+    return probs, test_y
 
 
-@click.command()
-@click.option('--verbose/--not-verbose', default=False)
-def main(verbose):
+def main():
+    from datautil import get_test_examples
 
     for season in range(2010, 2019):
-        seed_probs(season)
-        continue
+        test_y, test_X, team_info = get_test_examples(season)  # calls seed_probs internally
+        probs = test_X['seed_probs'].values
+
+        #if season == 2010:
+            # remove the play-in game
+        #    probs  = probs[1:]
+        #    test_y = test_y[1:]
+        #else:
+            # remove first four play-in games
+        #    probs  = probs[4:]
+        #    test_y = test_y[4:]
+
+        acc  = accuracy_score(test_y, [round(prob) for prob in probs])
+        loss = log_loss(test_y, probs)
+        print(f'{season}  acc: {acc}')
+        print(f'{season} loss: {loss}')
+        print('')
+
 
 if __name__ == '__main__':
     main()
