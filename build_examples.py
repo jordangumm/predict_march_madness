@@ -32,18 +32,36 @@ def write_examples(filename: str, gamesfunc, test=False):
         output.write('\n')
 
         for season in tqdm(range(2010, 2019)):
+            cache = {}
             for game in gamesfunc(season):
                 wteam = int(game['WTeamID'])
                 lteam = int(game['LTeamID'])
 
-                wteam_stats = get_team_stats(STATS, season, wteam)
-                lteam_stats = get_team_stats(STATS, season, lteam)
+                if wteam in cache:
+                    wteam_stats = cache[wteam]['stats']
+                    wteam_seed  = cache[wteam]['seed']
+                    wteam_rank  = cache[wteam]['rank']
+                else:
+                    wteam_stats = get_team_stats(STATS, season, wteam)
+                    wteam_seed = get_team_seed(SEEDS, season, wteam)
+                    wteam_rank = get_team_ranking(RANKS, season, wteam)
+                    cache[wteam] = {}
+                    cache[wteam]['stats'] = wteam_stats
+                    cache[wteam]['seed']  = wteam_seed
+                    cache[wteam]['rank']  = wteam_rank
 
-                wteam_seed = get_team_seed(SEEDS, season, wteam)
-                lteam_seed = get_team_seed(SEEDS, season, lteam)
-                
-                wteam_rank = get_team_ranking(RANKS, season, wteam)
-                lteam_rank = get_team_ranking(RANKS, season, lteam)
+                if lteam in cache:
+                    lteam_stats = cache[lteam]['stats']
+                    lteam_seed  = cache[lteam]['seed']
+                    lteam_rank  = cache[lteam]['rank']
+                else:
+                    lteam_stats = get_team_stats(STATS, season, lteam)
+                    lteam_seed  = get_team_seed(SEEDS, season, lteam)
+                    lteam_rank  = get_team_ranking(RANKS, season, lteam)
+                    cache[lteam] = {}
+                    cache[lteam]['stats'] = lteam_stats
+                    cache[lteam]['seed']  = lteam_seed
+                    cache[lteam]['rank']  = lteam_rank
 
                 if not test or wteam > lteam:
                     g = '1\t'
