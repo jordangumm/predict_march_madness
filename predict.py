@@ -91,24 +91,24 @@ def probability_calibration(probs, team_info):
     new_probs_two = []
     for game_index in range(len(probs)):
         info = team_info.iloc[game_index]
-        if (info['WTeamSeed'] == 1 and info['LTeamSeed'] == 16) or (info['LTeamSeed'] == 1 and info['WTeamSeed'] == 16):
-            one_seed    = info['WTeamID'] if info['WTeamSeed'] == 1 else info['LTeamID']
-            other_seed  = info['LTeamID'] if info['LTeamSeed'] == 16 else info['WTeamID']
+        if (info['WTeamSeed'] in (1, 2) and info['LTeamSeed'] in (15,  16)) or (info['LTeamSeed'] in (1, 2) and info['WTeamSeed'] in (15, 16)):
+            low_seed  = info['WTeamID'] if info['WTeamSeed'] in (1, 2) else info['LTeamID']
+            high_seed = info['LTeamID'] if info['LTeamSeed'] in (15, 16) else info['WTeamID']
 
-            if one_seed > other_seed:
+            if low_seed > high_seed:
                 new_probs_one.append([0.001, 0.999])
-                new_probs_two.append([0.001, 0.999])
+                new_probs_two.append(probs[game_index])
             else:
                 new_probs_one.append([0.999, 0.001])
-                new_probs_two.append([0.999, 0.001])
+                new_probs_two.append(probs[game_index])
             continue
 
         new_probs_one.append(probs[game_index])
         new_probs_two.append(probs[game_index])
 
-    nearest_index = get_even_match(probs)
-    new_probs_one[nearest_index] = [0.999, 0.001]
-    new_probs_two[nearest_index] = [0.001, 0.999]
+    # nearest_index = get_even_match(probs)
+    # new_probs_one[nearest_index] = [0.999, 0.001]
+    # new_probs_two[nearest_index] = [0.001, 0.999]
     return new_probs_one, new_probs_two
 
 @cli.command()
