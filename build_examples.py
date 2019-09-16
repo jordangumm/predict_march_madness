@@ -41,7 +41,7 @@ def write_examples(filename: str, gamesfunc, test=False):
         output.write('\tseason\tTeamOne\tTeamOneSeed\tTeamOneRank\tTeamOneMargin\tTeamTwo\tTeamTwoSeed\tTeamTwoRank\tTeamTwoMargin')
         output.write('\n')
 
-        for season in tqdm(range(2010, 2019)):
+        for season in tqdm(range(2010, 2020)):
             cache = {}
             for game in gamesfunc(season):
                 wteam = int(game['WTeamID'])
