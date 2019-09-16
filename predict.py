@@ -250,6 +250,101 @@ def dense(season: int, numbags: int, verbose: bool) -> None:
 
 @cli.command()
 @click.option('--season', '-s', default=2016)
+def xgboost_spline(season: int) -> None:
+    """Predict tournament games using XGBoost.
+
+    Great for producing gain metric to examine feature importance.
+
+    Args:
+        season:  tournamnet year to predict
+        numbags: number of boosted training sessions to aggregate
+        verbose: whether to display model training information (default=false)
+
+    """
+    train_X, train_y, test_X, test_y, team_info = load_examples(season)
+
+    dtrain = xgb.DMatrix(train_X, label = train_y)
+
+    def cauchyobj(preds, dtrain):
+        labels = dtrain.get_label()
+        c = 5000
+        x = preds - labels
+        grad = x / (x**2/c**2+1)
+        hess = -c**2*(x**2-c**2)/(x**2+c**2)**2
+        return grad, hess
+
+    param = {
+        'eval_metric':      'mae',
+        'booster':          'gbtree',
+        'eta':               0.02,
+        'subsample':         0.35,
+        'colsample_bytree':  0.7,
+        'num_parallel_tree': 10,
+        'min_child_weight':  40,
+        'gamma':             10,
+        'max_depth':         3,
+        'silent':            1,
+    }
+
+    xgb_cv = []
+    repeat_cv = 3 # change to 10?
+
+    for i in range(repeat_cv):
+        print(f'Fold repeater {i}')
+        xgb_cv.append(
+            xgb.cv(
+                params                = param,
+                dtrain                = dtrain,
+                obj                   = cauchyobj,
+                num_boost_round       = 3000,
+                folds                 = KFold(n_splits = 5, shuffle = True, random_state = i),
+                early_stopping_rounds = 25,
+                verbose_eval          = 50,
+            )
+        )
+    iteration_counts = [np.argmin(x['test-mae-mean'].values) for x in xgb_cv]
+    val_mae          = [np.min(x['test-mae-mean'].values) for x in xgb_cv]
+    
+    print(iteration_counts, val_mae)
+
+    oof_preds = []
+    for i in range(repeat_cv):
+        print(f'Fold repeater {i}')
+        preds = train_y.copy()
+        kfold = KFold(n_splits = 5, shuffle = True, random_state = i)
+        for train_index, val_index in kfold.split(train_X, train_y):
+            dtrain_i = xgb.DMatrix(train_X[train_index], label = train_y[train_index])
+            dval_i   = xgb.DMatrix(train_X[val_index],   label = train_y[val_index])
+            model = xgb.train(
+                params = param,
+                dtrain = dtrain_i,
+                num_boost_round = iteration_counts[i],
+                verbose_eval = 50,
+            )
+            preds[val_index] = model.predict(dval_i)
+        oof_preds.append(np.clip(preds, -30, 30))
+
+    plot_df = pd.DataFrame({'pred': oof_preds[0], 'label':np.where(train_y>0,1,0)})
+    print(plot_df)
+    return
+
+    spline_model = []
+
+    for i in range(repeat_cv):
+        dat = list(zip(oof_preds[i], np.where(train_y>0,1,0)))
+        dat = sorted(dat, key = lambda x: x[0])
+        datdict = {}
+        for k in range(len(dat)):
+            datdict[dat[k][0]] = dat[k][1]
+
+        spline_model.append(UnivariateSpline(list(datdict.keys()), list(datdict.values())))
+        spline_fit = spline_model[i](oof_preds[i])
+        print('logloss of cvsplit {i}: {log_loss(np.where(train_y>0,1,0),spline_fit)}')
+
+
+
+@cli.command()
+@click.option('--season', '-s', default=2016)
 @click.option('--verbose', is_flag=True)
 def select_maxout(season: int, verbose: bool) -> None:
     train_X, train_y, test_X, test_y = load_examples(season)
