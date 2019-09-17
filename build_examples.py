@@ -107,7 +107,7 @@ def write_examples(filename: str, gamesfunc: Callable, binary: bool, test: bool 
         output.write('\tseason\tTeamOne\tTeamOneSeed\tTeamOneRank\tTeamOneMargin\tTeamTwo\tTeamTwoSeed\tTeamTwoRank\tTeamTwoMargin')
         output.write('\n')
 
-        for season in tqdm(range(2010, 2020)):
+        for season in tqdm(range(2003, 2020)):
             cache = {}
             for game in gamesfunc(season):
                 wteam = int(game['WTeamID'])
