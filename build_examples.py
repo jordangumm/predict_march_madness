@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing  import Dict, Union
+from typing  import Callable, Dict, Union
 
 import numpy  as np
 import pandas as pd
@@ -15,7 +15,43 @@ STATS = load_team_stats()
 SEEDS = load_team_seeds()
 RANKS = load_team_rankings('WLK', daynum=133)
 
-VARS = ['eFG%', 'opp_eFG%', 'TO%', 'opp_TO%', 'OR%', 'DR%', 'FTR']
+VARS = [
+    'OR%',
+    'DR%',
+    'FTR',
+    'eFG%',
+    'TO%',
+    'PpM',  
+    'FGMpM',
+    'FGApM',
+    'FG3MpM',
+    'FG3ApM',
+    'FTMpM',
+    'FTApM',
+    'ORpM',
+    'DRpM',
+    'ApM',
+    'TOpM',
+    'SpM',
+    'BpM',
+    'PFpM',
+    'opp_eFG%',
+    'opp_TO%',
+    '_PpM',
+    '_FGMpM',
+    '_FGApM',
+    '_FG3MpM',
+    '_FG3ApM',
+    '_FTMpM',
+    '_FTApM',
+    '_ORpM',
+    '_DRpM',
+    '_ApM',
+    '_TOpM',
+    '_SpM',
+    '_BpM',
+    '_PFpM',
+]
 
 
 def calc_average_win_margin(team_id, season):
@@ -27,12 +63,42 @@ def calc_average_win_margin(team_id, season):
     return np.mean(score_diffs)
 
 
-def write_examples(filename: str, gamesfunc, test=False):
+def write_examples(filename: str, gamesfunc: Callable, binary: bool, test: bool = False):
     """Write appropriate examples for train or test.
 
     If test, only write game examples with larget kaggle_id coming first (as they score it).
     
     """
+
+    STATS.loc[:, 'PpM']     = STATS['Score']     / STATS['minutes_played']
+    STATS.loc[:, 'FGMpM']   = STATS['FGM']       / STATS['minutes_played']
+    STATS.loc[:, 'FGApM']   = STATS['FGA']       / STATS['minutes_played']
+    STATS.loc[:, 'FG3MpM']  = STATS['FGM3']      / STATS['minutes_played']
+    STATS.loc[:, 'FG3ApM']  = STATS['FGA3']      / STATS['minutes_played']
+    STATS.loc[:, 'FTMpM']   = STATS['FTM']       / STATS['minutes_played']
+    STATS.loc[:, 'FTApM']   = STATS['FTA']       / STATS['minutes_played']
+    STATS.loc[:, 'ORpM']    = STATS['OR']        / STATS['minutes_played']
+    STATS.loc[:, 'DRpM']    = STATS['DR']        / STATS['minutes_played']
+    STATS.loc[:, 'ApM']     = STATS['Ast']       / STATS['minutes_played']
+    STATS.loc[:, 'TOpM']    = STATS['TO']        / STATS['minutes_played']
+    STATS.loc[:, 'SpM']     = STATS['Stl']       / STATS['minutes_played']
+    STATS.loc[:, 'BpM']     = STATS['Blk']       / STATS['minutes_played']
+    STATS.loc[:, 'PFpM']    = STATS['PF']        / STATS['minutes_played']
+    STATS.loc[:, '_PpM']    = STATS['opp_Score'] / STATS['minutes_played']
+    STATS.loc[:, '_FGMpM']  = STATS['opp_FGM']   / STATS['minutes_played']
+    STATS.loc[:, '_FGApM']  = STATS['opp_FGA']   / STATS['minutes_played']
+    STATS.loc[:, '_FG3MpM'] = STATS['opp_FGM3']  / STATS['minutes_played']
+    STATS.loc[:, '_FG3ApM'] = STATS['opp_FGA3']  / STATS['minutes_played']
+    STATS.loc[:, '_FTMpM']  = STATS['opp_FTM']   / STATS['minutes_played']
+    STATS.loc[:, '_FTApM']  = STATS['opp_FTA']   / STATS['minutes_played']
+    STATS.loc[:, '_ORpM']   = STATS['opp_OR']    / STATS['minutes_played']
+    STATS.loc[:, '_DRpM']   = STATS['opp_DR']    / STATS['minutes_played']
+    STATS.loc[:, '_ApM']    = STATS['opp_Ast']   / STATS['minutes_played']
+    STATS.loc[:, '_TOpM']   = STATS['opp_TO']    / STATS['minutes_played']
+    STATS.loc[:, '_SpM']    = STATS['opp_Stl']   / STATS['minutes_played']
+    STATS.loc[:, '_BpM']    = STATS['opp_Blk']   / STATS['minutes_played']
+    STATS.loc[:, '_PFpM']   = STATS['opp_PF']    / STATS['minutes_played']
+
     with open(filename, 'w') as output:
         output.write('class\t')
         output.write('\t'.join(VARS))
@@ -80,7 +146,7 @@ def write_examples(filename: str, gamesfunc, test=False):
                     cache[lteam]['margin'] = lteam_margin
 
                 if not test or wteam > lteam:
-                    g = '1\t'
+                    g = '1\t' if binary else f'{game["WScore"] - game["LScore"]}\t'
                     g += '\t'.join([str(wteam_stats[s]) for s in VARS])
                     g += '\t'
                     g += '\t'.join([str(lteam_stats[s]) for s in VARS])
@@ -91,7 +157,7 @@ def write_examples(filename: str, gamesfunc, test=False):
                     output.write(g)
 
                 if not test or lteam > wteam:
-                    g = '0\t'
+                    g = '0\t' if binary else f'{game["LScore"] - game["WScore"]}\t'
                     g += '\t'.join([str(lteam_stats[s]) for s in VARS])
                     g += '\t'
                     g += '\t'.join([str(wteam_stats[s]) for s in VARS])
@@ -105,7 +171,11 @@ data_path = Path('predict_march_madness/data')
 if not data_path.exists():
     data_path.mkdir()
 
-write_examples('predict_march_madness/data/tourney_games.tsv', get_tournament_games)
+write_examples('predict_march_madness/data/tourney_games.tsv', get_tournament_games, True)
+write_examples('predict_march_madness/data/tourney_games_nodups.tsv', get_tournament_games, True, test=True)
+
+write_examples('predict_march_madness/data/tourney_games_margin.tsv', get_tournament_games, False)
+write_examples('predict_march_madness/data/tourney_games_margin_nodups.tsv', get_tournament_games, False, test=True)
+
 #write_examples('predict_march_madness/data/regular_games.tsv', get_regular_games)
-write_examples('predict_march_madness/data/tourney_games_nodups.tsv', get_tournament_games, test=True)
 #write_examples('predict_march_madness/data/regular_games_nodups.tsv', get_regular_games, test=True)

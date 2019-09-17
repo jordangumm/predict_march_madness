@@ -27,9 +27,9 @@ def cli():
     pass
 
 
-def load_examples(season: int):
-    train_y, train_X = get_train_examples(season)
-    test_y, test_X, test_info = get_test_examples(season)
+def load_examples(season: int, binary: bool = True):
+    train_y, train_X = get_train_examples(season, binary=binary)
+    test_y, test_X, test_info = get_test_examples(season, binary=binary)
 
     scaler = StandardScaler()
     scaler.fit(train_X)
@@ -261,14 +261,14 @@ def xgboost_spline(season: int) -> None:
         verbose: whether to display model training information (default=false)
 
     """
-    train_X, train_y, test_X, test_y, team_info = load_examples(season)
+    train_X, train_y, test_X, test_y, team_info = load_examples(season, binary=False)
 
     dtrain = xgb.DMatrix(train_X, label = train_y)
 
     def cauchyobj(preds, dtrain):
         labels = dtrain.get_label()
-        c = 5000
-        x = preds - labels
+        c = 5000 
+        x =  preds-labels    
         grad = x / (x**2/c**2+1)
         hess = -c**2*(x**2-c**2)/(x**2+c**2)**2
         return grad, hess
@@ -276,10 +276,10 @@ def xgboost_spline(season: int) -> None:
     param = {
         'eval_metric':      'mae',
         'booster':          'gbtree',
-        'eta':               0.02,
+        'eta':               0.05,
         'subsample':         0.35,
         'colsample_bytree':  0.7,
-        'num_parallel_tree': 10,
+        'num_parallel_tree': 3,
         'min_child_weight':  40,
         'gamma':             10,
         'max_depth':         3,
@@ -325,22 +325,19 @@ def xgboost_spline(season: int) -> None:
         oof_preds.append(np.clip(preds, -30, 30))
 
     plot_df = pd.DataFrame({'pred': oof_preds[0], 'label':np.where(train_y>0,1,0)})
-    print(plot_df)
-    return
 
     spline_model = []
 
     for i in range(repeat_cv):
-        dat = list(zip(oof_preds[i], np.where(train_y>0,1,0)))
+        dat = list(zip(oof_preds[i],np.where(train_y>0,1,0)))
         dat = sorted(dat, key = lambda x: x[0])
         datdict = {}
         for k in range(len(dat)):
-            datdict[dat[k][0]] = dat[k][1]
+            datdict[dat[k][0]]= dat[k][1]
 
         spline_model.append(UnivariateSpline(list(datdict.keys()), list(datdict.values())))
         spline_fit = spline_model[i](oof_preds[i])
-        print('logloss of cvsplit {i}: {log_loss(np.where(train_y>0,1,0),spline_fit)}')
-
+        print(f"logloss of cvsplit {i}: {log_loss(np.where(train_y>0,1,0),spline_fit)}") 
 
 
 @cli.command()

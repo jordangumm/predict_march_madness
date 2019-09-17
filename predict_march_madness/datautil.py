@@ -20,6 +20,9 @@ RANKINGS      = load_team_rankings('WLK', daynum=133)  # final pre-tournament ra
 
 tourney_scoring_games = pd.read_csv(dirpath / 'data/tourney_games_nodups.tsv', sep='\t')
 
+tourney_margin_games = pd.read_csv(dirpath / 'data/tourney_games_margin.tsv', sep='\t')
+tourney_scoring_margin_games = pd.read_csv(dirpath / 'data/tourney_games_margin_nodups.tsv', sep='\t')
+
 
 # FIXME: test if this is a useful feature
 def append_features(df: pd.DataFrame) -> pd.DataFrame:
@@ -31,8 +34,11 @@ def append_features(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def get_train_examples(season: int) -> Tuple[pd.DataFrame, pd.DataFrame]:
-    examples = tourney_games.loc[tourney_games['season'] < season]
+def get_train_examples(season: int, binary: bool = True) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    if binary:
+        examples = tourney_games.loc[tourney_games['season'] < season]
+    else:
+        examples = tourney_margin_games.loc[tourney_margin_games['season'] < season]
 
     # FIXME either incorporate filler seed for teams that did not qualify OR incorporate games of only tourney teams
     # examples = examples.append(regular_games.loc[regular_games['season'] <= season])
@@ -51,7 +57,7 @@ def get_train_examples(season: int) -> Tuple[pd.DataFrame, pd.DataFrame]:
     return train_y, train_X
 
 
-def get_test_examples(season: int) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def get_test_examples(season: int, binary: bool = True) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """Query test examples for season.
 
     Args:
@@ -61,15 +67,19 @@ def get_test_examples(season: int) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataF
         class, features, team info
 
     """
-    examples  = tourney_scoring_games.loc[tourney_scoring_games['season'] == season]
+    if binary:
+        examples = tourney_scoring_games.loc[tourney_scoring_games['season'] == season]
+    else:
+        examples = tourney_scoring_margin_games.loc[tourney_scoring_margin_games['season'] == season]
     
     if season == 2010:
         # remove the play-in game
         examples = examples.iloc[1:, :]
     else:
-        # remove firt for play-in games
+        # remove first four play-in games
         examples = examples.iloc[4:, :]
 
+    # Add info for scoring purposes
     team_info = examples[['class', 'season', 'TeamOne', 'TeamOneSeed', 'TeamOneRank', 'TeamTwo', 'TeamTwoSeed', 'TeamTwoRank']]
     team_info.loc[:, 'WTeamID']   = team_info.apply(lambda x: x['TeamOne'] if x['class'] == 1 else x['TeamTwo'], axis=1)
     team_info.loc[:, 'WTeamSeed'] = team_info.apply(lambda x: x['TeamOneSeed'] if x['class'] == 1 else x['TeamTwoSeed'], axis=1)
